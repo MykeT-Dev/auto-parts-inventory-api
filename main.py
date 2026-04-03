@@ -27,4 +27,26 @@ def get_applications(limit: int = 10):
 
     conn.close()
 
-    return [dict(row) for row in rows]  # 🔥 clean + no manual mapping
+    return [dict(row) for row in rows] 
+
+@app.get("/applications/{app_id}")
+def get_application(app_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    row = cursor.execute("""
+        SELECT app_id, headline, price_usd
+        FROM applications
+        WHERE app_id = ?
+    """, (app_id,)).fetchone()
+
+    conn.close()
+
+    if row is None:
+        return {"error": "Application not found"}
+
+    return {
+        "app_id": row[0],
+        "headline": row[1],
+        "price_usd": row[2]
+    }
