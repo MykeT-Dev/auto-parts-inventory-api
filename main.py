@@ -94,7 +94,7 @@ def get_parts(
     SELECT a.app_id, a.headline, a.price_usd, v.model_name, v.id as vehicle_id, pc.category_name
     FROM applications a
     JOIN compatibility c ON a.app_id = c.app_id
-    JOIN vehicles v ON c.vehicle_id = v.id
+    JOIN vehicles v ON c.vehicles_id = v.id
     JOIN product_category pc ON a.category_id = pc.id
     WHERE v.model_name = ? AND v.manufacturer_name = ? and ? BETWEEN c.bottom_year AND c.top_year
     """

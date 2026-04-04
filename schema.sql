@@ -50,8 +50,10 @@ CREATE TABLE applications (
 -- COMPATIBILITY (bridge table)
 CREATE TABLE compatibility (
     app_id BIGINT NOT NULL,
-    vehicle_id INT NOT NULL,
-    PRIMARY KEY (app_id, vehicle_id),
+    vehicles_id INT NOT NULL,
+    bottom_year INT NOT NULL,
+    top_year INT NOT NULL,
+    PRIMARY KEY (app_id, vehicles_id),
     FOREIGN KEY (app_id) REFERENCES applications(app_id),
-    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+    FOREIGN KEY (vehicles_id) REFERENCES vehicles(id)
 );

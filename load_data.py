@@ -26,7 +26,7 @@ def load_csv(cursor, table_name, file_path, columns):
                     new_row.append(row["type_name"])
 
 
-                elif table_name == "compatibility" and col == "vehicle_id":
+                elif table_name == "compatibility" and col == "vehicles_id":
                     new_row.append(row["vehicles_id"])
 
                 else:
@@ -69,7 +69,7 @@ def main():
         cursor,
         "vehicle_type",
         DATA_DIR / "vehicle_type.csv",
-        ["id", "vehicle_type_name"]  # ✅ FIXED
+        ["id", "vehicle_type_name"]
     )
 
     # Dependent tables
@@ -77,7 +77,7 @@ def main():
         cursor,
         "vehicles",
         DATA_DIR / "vehicles.csv",
-        ["id", "model_name", "manufacturer_name", "vehicle_type_id"]  # ✅ REMOVED year
+        ["id", "model_name", "manufacturer_name", "vehicle_type_id"]
     )
 
     load_csv(
@@ -101,7 +101,7 @@ def main():
         cursor,
         "compatibility",
         DATA_DIR / "compatibility.csv",
-        ["app_id", "vehicle_id"]
+        ["app_id", "vehicles_id"]
     )
 
     conn.commit()
