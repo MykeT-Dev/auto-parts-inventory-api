@@ -122,16 +122,18 @@ GET /parts?make=ford&model=mustang&year=2000&page=1&page_size=20
 
 #### Example Response
 
+<pre><code>
 [
   {
-    "app_id": 11122296,
-    "headline": "FORD Mustang 1999-2003",
-    "price_usd": 83,
-    "vehicle_model": "Mustang",
-    "vehicle_id": 517,
-    "category": "Headlight"
+    &quot;app_id&quot;: 11122296,
+    &quot;headline&quot;: &quot;FORD Mustang 1999-2003&quot;,
+    &quot;price_usd&quot;: 83,
+    &quot;vehicle_model&quot;: &quot;Mustang&quot;,
+    &quot;vehicle_id&quot;: 517,
+    &quot;category&quot;: &quot;Headlight&quot;
   }
 ]
+</code></pre>
 ---
 
 ## Current Status
