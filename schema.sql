@@ -51,8 +51,8 @@ CREATE TABLE applications (
 CREATE TABLE compatibility (
     app_id BIGINT NOT NULL,
     vehicles_id INT NOT NULL,
-    bottom_year INT NOT NULL,
-    top_year INT NOT NULL,
+    bottom_year INT,
+    top_year INT,
     PRIMARY KEY (app_id, vehicles_id),
     FOREIGN KEY (app_id) REFERENCES applications(app_id),
     FOREIGN KEY (vehicles_id) REFERENCES vehicles(id)

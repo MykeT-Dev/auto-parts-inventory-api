@@ -70,9 +70,9 @@ def get_application(app_id: int):
 # Endpoint to lookup parts compatible with a vehicle
 @app.get("/parts")
 def get_parts(
-    make: str,
-    model: str,
-    year: int,
+    make: Optional[str] = None,
+    model: Optional[str] = None,
+    year: Optional[int] = None,
     category: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
@@ -96,13 +96,26 @@ def get_parts(
     JOIN compatibility c ON a.app_id = c.app_id
     JOIN vehicles v ON c.vehicles_id = v.id
     JOIN product_category pc ON a.category_id = pc.id
-    WHERE v.model_name = ? AND v.manufacturer_name = ? and ? BETWEEN c.bottom_year AND c.top_year
+    WHERE 1=1
     """
 
     # Parameters for SQL query
-    params: List[Optional[str]] = [model, make, year]
+    params: List = []
 
     # Add optional filters if provided
+
+    if make:
+        query += " AND LOWER(v.manufacturer_name) LIKE LOWER(?)"
+        params.append(F"%{make}%")
+
+    if model:
+        query += " AND LOWER(v.model_name) LIKE LOWER(?)"
+        params.append(F"%{model}%")
+
+    if year is not None:
+        query += " AND ? BETWEEN c.bottom_year AND c.top_year"
+        params.append(year)
+
     if category:
         query += " AND pc.category_name = ?"
         params.append(category)
@@ -137,3 +150,20 @@ def get_parts(
         }
         for row in rows
     ]
+
+@app.get("/debug/counts")
+def debug_counts():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    apps = cursor.execute("SELECT COUNT(*) FROM applications").fetchone()[0]
+    compat = cursor.execute("SELECT COUNT(*) FROM compatibility").fetchone()[0]
+    vehicles = cursor.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
+
+    conn.close()
+
+    return {
+        "applications": apps,
+        "compatibility": compat,
+        "vehicles": vehicles
+    }

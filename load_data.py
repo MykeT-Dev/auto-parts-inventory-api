@@ -25,10 +25,6 @@ def load_csv(cursor, table_name, file_path, columns):
                 elif table_name == "vehicle_type" and col == "vehicle_type_name":
                     new_row.append(row["type_name"])
 
-
-                elif table_name == "compatibility" and col == "vehicles_id":
-                    new_row.append(row["vehicles_id"])
-
                 else:
                     new_row.append(row[col])
 
@@ -101,7 +97,7 @@ def main():
         cursor,
         "compatibility",
         DATA_DIR / "compatibility.csv",
-        ["app_id", "vehicles_id"]
+        ["app_id", "bottom_year", "top_year", "vehicles_id"]
     )
 
     conn.commit()
