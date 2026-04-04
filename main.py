@@ -150,20 +150,3 @@ def get_parts(
         }
         for row in rows
     ]
-
-@app.get("/debug/counts")
-def debug_counts():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    apps = cursor.execute("SELECT COUNT(*) FROM applications").fetchone()[0]
-    compat = cursor.execute("SELECT COUNT(*) FROM compatibility").fetchone()[0]
-    vehicles = cursor.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0]
-
-    conn.close()
-
-    return {
-        "applications": apps,
-        "compatibility": compat,
-        "vehicles": vehicles
-    }
