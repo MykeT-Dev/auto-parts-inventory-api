@@ -1,11 +1,14 @@
-from fastapi import FastAPI, Query, HTTPException, params
+from fastapi import FastAPI, Query, HTTPException
 from typing import Optional, List
 import sqlite3
+import os
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from pydantic import BaseModel
+
 
 # Initialize FastAPI application
 app = FastAPI()
@@ -15,8 +18,10 @@ DB_PATH = "database.db"
 
 # AUTH Configuration
 
-# Secret key for JWT encoding/decoding (in production, use a secure method to store this)
-SECRET_KEY = "dev-secret-key"
+# Secret key for JWT encoding/decoding
+# For local deployment, it falls back to "dev-secret-key"
+# For deployment, set SECRET_KEY as an environment variable
+SECRET_KEY = os.getenv("SECRET_KEY","dev-secret-key")
 
 # Algorithm used for JWT
 ALGORITHM = "HS256"
@@ -171,6 +176,19 @@ def require_admin(current_user: dict = Depends(get_current_user)):
     # If user is admin, allow access
     return current_user
 
+# Request model for adding a new part
+# Tells FASTAPI what fields are required when sending a POST request
+class PartCreate(BaseModel):
+    headline: str
+    price_usd: float
+    category_id: int
+    seller_id: int
+    status_id: int
+    vehicle_type_id: int
+    in_stock: int
+    vehicles_id: int
+    bottom_year: Optional[int] = None
+    top_year: Optional[int] = None
 
 # Helper function to create a database connection
 def get_connection():
@@ -350,7 +368,7 @@ def get_parts(
 # Add new part (Admin only)
 @app.post("/parts")
 def add_part(
-    part: dict,
+    part: PartCreate,
     current_user: dict = Depends(require_admin)
 ):
     """
@@ -377,13 +395,13 @@ def add_part(
                    in_stock
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
-        part["headline"],
-        part["price_usd"],
-        part["category_id"],
-        part["seller_id"],
-        part["status_id"],
-        part["vehicle_type_id"],
-        part["in_stock"]
+        part.headline,
+        part.price_usd,
+        part.category_id,
+        part.seller_id,
+        part.status_id,
+        part.vehicle_type_id,
+        part.in_stock
     ))
 
     # Get the new app_id
@@ -400,9 +418,9 @@ def add_part(
         ) VALUES (?, ?, ?, ?)
     """, (
         new_app_id,
-        part["vehicles_id"],
-        part.get("bottom_year"),
-        part.get("top_year")
+        part.vehicles_id,
+        part.bottom_year,
+        part.top_year
     ))
 
     # Save changes
@@ -414,5 +432,5 @@ def add_part(
     return {
         "message": "Part added successfully",
         "app_id": new_app_id,
-        "linked_vehicle": part["vehicles_id"]
+        "linked_vehicle": part.vehicles_id
     }
