@@ -53,17 +53,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 fake_users_db = {
     "admin": {
         "username": "admin",
-
-        # Hash the password using bcrypt
-        # Note: This will generate a different hash each time the app runs
-        "hashed_password": pwd_context.hash("admin123"),
-
-        # Role is used for access control (e.g., admin vs regular user)
+        # Pre-generated bcrypt hash for: admin123
+        "hashed_password": "$2b$12$nTtoxasUt/XSHdeYi6SBku8idhO56ZIjTZ0qEwkEC5ygARc6878b.",
         "role": "admin"
     },
     "user": {
         "username": "user",
-        "hashed_password": pwd_context.hash("user123"),
+        # Pre-generated bcrypt hash for: user123
+        "hashed_password": "$2b$12$XtgRoXKh3X5BE9zMj8OhKOH0t5ZPSA59Xvvm//B1KVfnR82AeS3xG",
         "role": "user"
     }
 }    
