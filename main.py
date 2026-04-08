@@ -8,13 +8,26 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from pydantic import BaseModel
+from setup_db import setup_database
 
 
 # Initialize FastAPI application
 app = FastAPI()
 
+
 # Path to SQLite database
 DB_PATH = "database.db"
+
+def initialize_database():
+    """
+    Check if the database file exists. If not, create it and set up tables.
+    This ensures the database is ready when the app starts.
+    """
+    if not os.path.exists(DB_PATH):
+        print("Database file not found. Initializing database...")
+        setup_database()
+    else:
+        print("Database file found. Skipping initialization.")
 
 # AUTH Configuration
 
@@ -197,6 +210,14 @@ def get_connection():
     # Return rows as dictionary-like objects
     conn.row_factory = sqlite3.Row 
     return conn
+
+@app.on_event("startup")
+def startup_event():
+    """
+    FastAPI startup event handler.
+    This runs when the application starts and ensures the database is initialized.
+    """
+    initialize_database()
 
 # Root endpoint for testing
 @app.get("/")

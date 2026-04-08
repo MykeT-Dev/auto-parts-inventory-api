@@ -15,14 +15,18 @@ def create_tables():
 
     print("Database tables created successfully.")
 
-def main():
+def setup_database():
+    """
+    Create the SQLite database tables and load the seed data.
+    This is used when the app starts and no database file exists yet.
+    """
     print("Setting up the database...")
-
+    
     create_tables()
     load_data_main()
 
     print("Database setup complete.")
 
 if __name__ == "__main__":
-    main()
+    setup_database()
 
