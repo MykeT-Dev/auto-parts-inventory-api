@@ -10,6 +10,8 @@ __pycache__/
 
 # Raw data files
 *.csv
+# Except the seed data file
+!data_raw/*.csv
 
 # Database files
 *.db
