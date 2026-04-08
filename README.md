@@ -6,6 +6,23 @@ This project focuses on backend system design, relational database modeling, and
 
 ---
 
+## Live API
+
+Base URL:  
+https://auto-parts-inventory-api.onrender.com  
+
+Interactive Swagger Docs:  
+https://auto-parts-inventory-api.onrender.com/docs  
+
+You can authenticate using:
+
+- Username: admin  
+- Password: admin123  
+
+Then click **Authorize** in Swagger to access protected endpoints.
+
+---
+
 ## Project Overview
 
 This project simulates a real-world inventory and parts lookup system used in service and parts departments.
@@ -38,6 +55,10 @@ The system is designed to handle structured data relationships between parts, ve
 - FastAPI
 - SQLite
 - SQL
+- JWT Authentication (python-jose)
+- Password Hashing (passlib / bcrypt)
+- Uvicorn (ASGI server)
+- Render (deployment)
 
 ---
 
@@ -207,6 +228,20 @@ Example request:
 </code></pre>
 ---
 
+## Deployment
+
+This API is deployed on Render.
+
+On startup, the application checks for the existence of `database.db`.  
+If the database is missing, it automatically:
+
+- Creates tables using `schema.sql`
+- Loads seed data from the `data_raw/` CSV files
+
+This ensures the application can be deployed and run in a fresh environment without manual setup.
+
+---
+
 ## Current Status
 
 The core API and database pipeline are fully functional and stable.
@@ -221,7 +256,8 @@ Current focus:
 
 - Introduce a frontend UI for interacting with the API
 - Enhance filtering capabilities (e.g., partial text search)
-- Deploy the API for public access
+- Improve authentication system (move from in-memory users to database-backed users)
+- Add API rate limiting and request validation enhancements
 
 ---
 
