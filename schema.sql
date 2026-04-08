@@ -33,7 +33,7 @@ CREATE TABLE vehicles (
 
 -- APPLICATIONS
 CREATE TABLE applications (
-    app_id BIGINT PRIMARY KEY,
+    app_id INTEGER PRIMARY KEY AUTOINCREMENT,
     headline VARCHAR(255) NOT NULL,
     price_usd FLOAT NOT NULL,
     category_id INT NOT NULL,
