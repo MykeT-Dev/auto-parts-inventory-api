@@ -1,12 +1,176 @@
 from fastapi import FastAPI, Query, HTTPException, params
 from typing import Optional, List
 import sqlite3
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
 
 # Initialize FastAPI application
 app = FastAPI()
 
 # Path to SQLite database
 DB_PATH = "database.db"
+
+# AUTH Configuration
+
+# Secret key for JWT encoding/decoding (in production, use a secure method to store this)
+SECRET_KEY = "dev-secret-key"
+
+# Algorithm used for JWT
+ALGORITHM = "HS256"
+
+# Token expiration time
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Password hashing context using bcrypt
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+#OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+# Fake user database for demonstration purposes
+fake_users_db = {
+    "admin": {
+        "username": "admin",
+
+        # Hash the password using bcrypt
+        # Note: This will generate a different hash each time the app runs
+        "hashed_password": pwd_context.hash("admin123"),
+
+        # Role is used for access control (e.g., admin vs regular user)
+        "role": "admin"
+    },
+    "user": {
+        "username": "user",
+        "hashed_password": pwd_context.hash("user123"),
+        "role": "user"
+    }
+}    
+
+# Authentication functions
+
+# Verify a plain password against a hashed password
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Authenticate user by username and password
+def authenticate_user(username: str, password: str):
+    # Look up user in fake database
+    user = fake_users_db.get(username)
+    # If user not found or password doesn't match, return None
+    if not user or not verify_password(password, user["hashed_password"]):
+        return None
+    # Return user dict if authentication successful
+    return user
+
+# Create a JWT access token for a user
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    # Copy the data
+    to_encode = data.copy()
+
+    # Set expiration time for the token
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+
+    # Encode the JWT token
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return encoded_jwt
+
+# Login Endpoint
+
+# endpoint handles user login and returns a JWT token
+@app.post("/token")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    OAuth2 compatible login endpoint.
+    
+    Expects:
+    - username
+    - password
+    
+    Returns:
+    -JWT access token if credentials are valid
+    """
+
+    # Authenticate the user using the helper function
+    user = authenticate_user(form_data.username, form_data.password)
+
+    # If authentication fails, raise an HTTP 401 Unauthorized
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password"
+        )
+    
+    # Create a JWT token with user data
+    access_token = create_access_token(
+        data={
+            "sub": user["username"],
+            "role": user["role"]
+        },
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
+    # Return the tokem in standard OAuth2 format
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
+# Get current user from token
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    """
+    Extract and validate the user from the JWT token
+    """
+
+    # Default exception if token is invalid
+    credentials_exceptiion = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials"
+    )
+
+    try:
+        # Decode the JWT token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        # Extract user info
+        username = payload.get("sub")
+        role = payload.get("role")
+
+        # If no username, token is invalid
+        if username is None:
+            raise credentials_exceptiion
+        
+    except JWTError:
+        # Token is invalid or expired
+        raise credentials_exceptiion
+
+    # return user data
+    return {
+        "username": username,
+        "role": role
+    }
+
+# Require admin role for certain endpoints
+def require_admin(current_user: dict = Depends(get_current_user)):
+    """
+    Ensures the user has admin privileges
+    """
+
+    # Check if the user's role is NOT admin
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    # If user is admin, allow access
+    return current_user
+
 
 # Helper function to create a database connection
 def get_connection():
@@ -76,16 +240,29 @@ def get_parts(
     category: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
+    part_name: Optional[str] = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100)
+    page_size: int = Query(20, ge=1, le=100),
+
+    # Requires authentication for this enpoint
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Lookup parts compatible with a vehicle (make, model, year)
-    Optional filters: category, min_price, max_price
+
+    Optional filters: 
+    - category 
+    - min_price
+    - max_price
+    - part_name
+
     Supports pagination
     """
+
     # Calculate offset for pagination
     offset = (page - 1) * page_size
+
+    # Connect to database
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -104,27 +281,46 @@ def get_parts(
 
     # Add optional filters if provided
 
+    # Filter by vehicle make (manufacturer_name)
     if make:
         query += " AND LOWER(v.manufacturer_name) LIKE LOWER(?)"
         params.append(F"%{make}%")
 
+    # Filter by vehicle model
     if model:
         query += " AND LOWER(v.model_name) LIKE LOWER(?)"
         params.append(F"%{model}%")
 
+    # Filter by model year fitting range
     if year is not None:
         query += " AND ? BETWEEN c.bottom_year AND c.top_year"
         params.append(year)
 
+    # Filter by category name
     if category:
         query += " AND pc.category_name = ?"
         params.append(category)
+
+    # Filter by minimum price
     if min_price is not None:
         query += " AND a.price_usd >= ?"
         params.append(min_price)
+
+    # Filter by maximum price
     if max_price is not None:
         query += " AND a.price_usd <= ?"
         params.append(max_price)
+
+    # Filter by part name in headline
+    if part_name:
+        query += """
+        AND (
+            LOWER(a.headline) LIKE LOWER(?)
+            OR LOWER(pc.category_name) LIKE LOWER(?)
+        )
+        """
+        params.append(f"%{part_name}%")
+        params.append(f"%{part_name}%")
 
     # Add pagination limits
     query += " LIMIT ? OFFSET ?"
@@ -150,3 +346,73 @@ def get_parts(
         }
         for row in rows
     ]
+
+# Add new part (Admin only)
+@app.post("/parts")
+def add_part(
+    part: dict,
+    current_user: dict = Depends(require_admin)
+):
+    """
+    Add a new part to the database (Admin only)
+
+    This does two things:
+    1. Inserts a new part into the applications table
+    2. Link that part to a vehicle in the compatibility table
+    """
+
+    # Connect to database
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Insert into applications table
+    cursor.execute("""
+        INSERT INTO applications (
+                   headline,
+                   price_usd,
+                   category_id,
+                   seller_id,
+                   status_id,
+                   vehicle_type_id,
+                   in_stock
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        part["headline"],
+        part["price_usd"],
+        part["category_id"],
+        part["seller_id"],
+        part["status_id"],
+        part["vehicle_type_id"],
+        part["in_stock"]
+    ))
+
+    # Get the new app_id
+    # SQLite automatically generates this (AUTOINCREMENT)
+    new_app_id = cursor.lastrowid
+
+    # Insert into compatibility table to link part to vehicle
+    cursor.execute("""
+        INSERT INTO compatibility (
+                   app_id,
+                   vehicles_id,
+                   bottom_year,
+                   top_year
+        ) VALUES (?, ?, ?, ?)
+    """, (
+        new_app_id,
+        part["vehicles_id"],
+        part.get("bottom_year"),
+        part.get("top_year")
+    ))
+
+    # Save changes
+    conn.commit()
+
+    # Close connection
+    conn.close()
+
+    return {
+        "message": "Part added successfully",
+        "app_id": new_app_id,
+        "linked_vehicle": part["vehicles_id"]
+    }
